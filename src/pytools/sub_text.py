@@ -16,8 +16,30 @@ def is_regular_file(path):
     return stat.S_ISREG(st.st_mode)
 
 
+def _restore_after_failure(file, backup, exc):
+    """Best-effort undo: put the untouched original back at its original
+    path so a failed substitution leaves no trace, rather than leaving
+    `file` missing and `file.orig` behind even when -backup wasn't asked
+    for."""
+    try:
+        os.rename(backup, file)
+    except OSError as restore_exc:
+        print(
+            f"Error processing {file} ({exc}); could not restore original "
+            f"({restore_exc}); unmodified content preserved as {backup}"
+        )
+    else:
+        print(f"Error processing {file} ({exc}); original restored, no changes made.")
+
+
 def process_file(file, pattern, replacement, keep_backup):
     backup = file + ".orig"
+    if os.path.exists(backup):
+        print(
+            f"Backup {backup} already exists, skipping {file} to avoid overwriting it."
+        )
+        return
+
     try:
         original_mode = stat.S_IMODE(os.stat(file).st_mode)
         os.rename(file, backup)
@@ -33,24 +55,25 @@ def process_file(file, pattern, replacement, keep_backup):
             tmp_fd, tmp_path = tempfile.mkstemp(
                 dir=os.path.dirname(file) or ".", prefix=os.path.basename(file) + "."
             )
-            # mkstemp() always creates files as mode 0600, ignoring umask;
-            # restore the original file's permissions before it goes live.
-            os.chmod(tmp_path, original_mode)
             with os.fdopen(
                 tmp_fd, "w", encoding="utf-8", errors="surrogateescape", newline=""
             ) as out_f:
+                # mkstemp() always creates files as mode 0600, ignoring
+                # umask; restore the original file's permissions before it
+                # goes live. fchmod on the already-open fd (rather than
+                # os.chmod on the path) means the descriptor is owned by
+                # the `with` block from the moment it's created, so a
+                # failure here can't leak it.
+                os.fchmod(out_f.fileno(), original_mode)
                 for line in backup_f:
                     out_f.write(pattern.sub(replacement, line))
     except OSError as exc:
-        print(
-            f"Unable to open file {backup} ({exc}), skipping... "
-            f"(original preserved as {backup})"
-        )
+        _restore_after_failure(file, backup, exc)
         if tmp_path:
             os.unlink(tmp_path)
         return
     except Exception as exc:
-        print(f"Error processing {file} ({exc}); original preserved as {backup}")
+        _restore_after_failure(file, backup, exc)
         if tmp_path:
             os.unlink(tmp_path)
         return
@@ -62,7 +85,6 @@ def process_file(file, pattern, replacement, keep_backup):
 
 def main():
     parser = argparse.ArgumentParser(
-        add_help=False,
         description="Substitute a regex pattern in files under a directory.",
     )
     parser.add_argument(
