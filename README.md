@@ -42,8 +42,8 @@ Example:
 ```bash
 $ find-dup ~/Downloads
 Duplicate set (size: 2048576 bytes, sha256: 9f86d0...):
-  /Users/rkyo/Downloads/report.pdf
-  /Users/rkyo/Downloads/report (1).pdf
+  /Users/apexarkai/Downloads/report.pdf
+  /Users/apexarkai/Downloads/report (1).pdf
 
 1 duplicate sets found, 1 redundant files, 2.0 MB reclaimable.
 ```

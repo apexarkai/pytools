@@ -9,7 +9,7 @@ description = "A small collection of standalone CLI utilities (dedup finder, tex
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-authors = [{ name = "rkyo" }]
+authors = [{ name = "apexarkai" }]
 
 [project.scripts]
 find-dup = "pytools.find_dup:main"
