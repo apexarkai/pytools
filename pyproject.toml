@@ -16,7 +16,7 @@ find-dup = "pytools.find_dup:main"
 sub-text = "pytools.sub_text:main"
 
 [project.optional-dependencies]
-dev = ["black>=24", "ruff>=0.4"]
+dev = ["black==25.11.0", "ruff==0.16.2"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
