@@ -5,6 +5,7 @@ import re
 import stat
 import sys
 import tempfile
+from typing import Optional
 
 
 def is_regular_file(path):
@@ -83,7 +84,7 @@ def process_file(file, pattern, replacement, keep_backup):
         os.unlink(backup)
 
 
-def main():
+def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description="Substitute a regex pattern in files under a directory.",
     )
@@ -108,7 +109,7 @@ def main():
     parser.add_argument("pattern", nargs="?", help="Regex to be substituted.")
     parser.add_argument("replacement", nargs="?", help="Replacement string.")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.pattern is None or args.replacement is None:
         sys.stderr.write(
@@ -122,17 +123,17 @@ Usage: {sys.argv[0]} [-d <directory>] [-name <filepattern>] [-backup] \
        <replacement> is the string to replace <pattern> with.
 """
         )
-        sys.exit(1)
+        return 1
 
     if not os.path.isdir(args.directory):
         sys.stderr.write(f"{sys.argv[0]}: {args.directory}: No such directory\n")
-        sys.exit(1)
+        return 1
 
     try:
         pattern = re.compile(args.pattern)
     except re.error as exc:
         sys.stderr.write(f"Invalid pattern {args.pattern!r}: {exc}\n")
-        sys.exit(1)
+        return 1
 
     # Neutralize re.sub's backslash templating (\n, \1, \g<name>, ...) so the
     # replacement text is inserted literally, matching the original Perl script.
@@ -152,6 +153,8 @@ Usage: {sys.argv[0]} [-d <directory>] [-name <filepattern>] [-backup] \
     for file in filelist:
         process_file(file, pattern, replacement, args.backup)
 
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
